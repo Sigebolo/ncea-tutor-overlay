@@ -1,0 +1,13 @@
+NCEA Tutor
+Copyright 2026 NCEA Tutor contributors
+
+This repository is an overlay for DeepTutor
+(https://github.com/HKUDS/DeepTutor), Copyright HKUDS,
+licensed under the Apache License, Version 2.0.
+
+No DeepTutor source code is redistributed here: DeepTutor is installed from
+PyPI and patched at install time by scripts/apply_site_patches.py.
+
+NZQA examination papers remain Crown copyright and are not included. The
+question index records only a location, a verified answer and the level of
+verification for that answer.
