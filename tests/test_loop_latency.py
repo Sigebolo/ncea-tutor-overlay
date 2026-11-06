@@ -44,7 +44,10 @@ from deeptutor.knowledge.manifest import (
     KbManifest,
     render_manifest_note,
 )
-from deeptutor.agents.loop.pipeline import _seed_kbs, _seed_tokens
+try:
+    from deeptutor.agents.loop.pipeline import _seed_kbs, _seed_tokens
+except ImportError as exc:      # stock package: the overlay is not applied
+    pytest.skip(f"needs the patched deeptutor: {exc}", allow_module_level=True)
 
 
 def _doc(name: str) -> KbDocument:

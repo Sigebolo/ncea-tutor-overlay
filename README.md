@@ -34,13 +34,22 @@ bundles no third-party content.
 ```bash
 python3.11 -m venv .venv && . .venv/bin/activate
 pip install "deeptutor==1.7.0" pytest
-python scripts/apply_site_patches.py     # patch the installed package
+python scripts/apply_site_patches.py "$(python -c 'import site; print(site.getsitepackages()[0])')" --no-web-entry
 python -m pytest tests -q                # 8 suites
 ```
 
 The patcher is idempotent: re-running it re-applies the same edits and reports
 which ones were already present. It patches the installed package rather than a
-checked-out tree, so it must run in the same environment as `deeptutor`.
+checked-out tree, so it needs that package's `site-packages` path.
+
+`--no-web-entry` skips the Google sign-in entry. That entry edits a *built*
+frontend, which a plain install does not have, and counting its absence as a
+missing helper made the installer exit 1 on every fresh checkout.
+
+Three checks need something this repository deliberately does not ship: a
+knowledge base, a built frontend, and an installed-and-patched package. They
+skip with a reason instead of failing, so a fresh clone is green. CI runs
+against an unpatched install, which is what a contributor can reproduce.
 
 ## Design rules
 
