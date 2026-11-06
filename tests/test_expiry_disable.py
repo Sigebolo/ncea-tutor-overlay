@@ -15,6 +15,7 @@ Run: .venv\\Scripts\\python.exe -m pytest tests/test_expiry_disable.py -q
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import json
 import os
 import sys
@@ -24,6 +25,24 @@ import pytest
 
 HERE = Path(__file__).resolve().parent
 SCRIPT = HERE.parent / "scripts" / "expiry_auto_disable.py"
+
+from deeptutor.services import auth as _auth
+
+# The refusal is one of the overlay's patches: stock 1.7.0 carries the `disabled`
+# field and never checks it, so on a plain install only the script half of this
+# suite can run. Detected from the installed source, not assumed.
+_PATCHED_AUTH = "refused for disabled account" in inspect.getsource(_auth)
+
+
+@pytest.fixture(autouse=True)
+def _needs_patched_auth(request):
+    if request.node.name in {
+        "test_authenticate_refuses_disabled",
+        "test_decode_token_refuses_disabled",
+    } and not _PATCHED_AUTH:
+        pytest.skip(
+            "needs the patched deeptutor (disabled accounts are refused at login)"
+        )
 
 
 def _load_script():
