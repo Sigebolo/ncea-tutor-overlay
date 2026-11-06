@@ -3290,9 +3290,15 @@ def verify_web_demo_entry(site: Path) -> list[str]:
     return problems
 
 
-def report_helper_state(site: Path) -> int:
-    """Print the installed-helper audit. Returns 0 when healthy, else 1."""
-    problems = verify_helpers(site) + source_drift() + verify_web_demo_entry(site)
+def report_helper_state(site: Path, check_web: bool = True) -> int:
+    """Print the installed-helper audit. Returns 0 when healthy, else 1.
+
+    ``check_web=False`` drops the web-demo entry from the audit: that entry
+    injects Google sign-in into a BUILT frontend, so a checkout or CI
+    environment without one reports a gap no helper install can close.
+    """
+    web = verify_web_demo_entry(site) if check_web else []
+    problems = verify_helpers(site) + source_drift() + web
     if not problems:
         print(f"HELPERS OK: {len(HELPERS)}/{len(HELPERS)} installed, "
               "current, compiling.")
@@ -3316,7 +3322,12 @@ def main() -> None:
     # way to land an edit was to sync every helper with it, so a repo whose
     # helper sources are AHEAD of production could not be patched at all.
     edits_only = "--edits-only" in raw
-    argv = [a for a in raw if a not in ("--verify", "--edits-only")]
+    # A code overlay on a tree with no built frontend (a checkout, CI, a fresh
+    # PyPI install): the web-demo entry cannot be installed or checked there,
+    # and reporting it as a hole would fail every such run.
+    no_web = "--no-web-entry" in raw
+    argv = [a for a in raw
+            if a not in ("--verify", "--edits-only", "--no-web-entry")]
     # Patching a target tree whose dist metadata this interpreter cannot see
     # (a staged wheel tree, or a copy used for a dry run) - name the release
     # explicitly. The patch table is chosen from this value, so never guess it.
@@ -3330,7 +3341,7 @@ def main() -> None:
         # Standalone audit: confirm every helper is installed, current and
         # compiling, without touching anything. This is the check that would
         # have caught the absent output guard in production.
-        raise SystemExit(report_helper_state(site))
+        raise SystemExit(report_helper_state(site, check_web=not no_web))
     try:
         ver = importlib.metadata.version("deeptutor")
     except importlib.metadata.PackageNotFoundError:
@@ -3384,15 +3395,16 @@ def main() -> None:
         # NCEA helpers (separate entries: parallel tracks, do not merge).
         if not edits_only:
             changed += install_helpers(site)
-            changed += install_web_demo_entry(site)
+            if not no_web:
+                changed += install_web_demo_entry(site)
     except BaseException:
         # A crash from here leaves the EDITS applied and the helper set
         # partly installed - exactly the state that hid the absent output
         # guard in production. Never exit quietly from it.
         print()
-        report_helper_state(site)
+        report_helper_state(site, check_web=not no_web)
         raise
-    ok = report_helper_state(site)
+    ok = report_helper_state(site, check_web=not no_web)
     print(f"done: {changed} edit(s) applied, rest already present.")
     if ok and not edits_only:
         raise SystemExit(1)
