@@ -22,6 +22,16 @@ import pytest
 
 from deeptutor.multi_user import grants, identity
 
+# Both exceptions are introduced by the overlay's patches, so a stock package
+# has nothing to test here. CI runs against a stock install.
+if not hasattr(identity, "CorruptUserStoreError") or not hasattr(
+    grants, "CorruptGrantError"
+):
+    pytest.skip(
+        "needs the patched deeptutor (CorruptUserStoreError / CorruptGrantError)",
+        allow_module_level=True,
+    )
+
 
 @pytest.fixture()
 def iso_dirs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
